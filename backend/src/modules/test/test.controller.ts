@@ -10,14 +10,18 @@ export class TestController {
   async findAll(
     @Query('level') level?: string,
     @Query('year') year?: string,
-  ): Promise<Test[]> {
+  ): Promise<{ tests: Test[] }> {
     const yearNumber = year ? parseInt(year, 10) : undefined;
-    return this.testService.findAll(level, yearNumber);
+    const tests = await this.testService.findAll(level, yearNumber);
+    return this.testService.buildTestsResponse(tests);
   }
 
   @Get(':id')
-  async findOne(@Param('id', ParseIntPipe) id: number): Promise<Test> {
-    return this.testService.findOne(id);
+  async findOne(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<{ test: Test }> {
+    const test = await this.testService.findOne(id);
+    return this.testService.buildTestResponse(test);
   }
 }
 

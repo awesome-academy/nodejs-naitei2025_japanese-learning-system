@@ -55,23 +55,19 @@ export class TestService {
       throw new NotFoundException(`Test with ID ${id} not found`);
     }
 
-    // Sort sections by order_index
     if (test.sections) {
       test.sections.sort((a, b) => a.order_index - b.order_index);
 
-      // Sort parts within each section
       test.sections.forEach((section) => {
         if (section.parts) {
           section.parts.sort((a, b) => a.part_number - b.part_number);
 
-          // Sort questions within each part
           section.parts.forEach((part) => {
             if (part.questions) {
               part.questions.sort(
                 (a, b) => a.question_number - b.question_number,
               );
 
-              // Sort options within each question
               part.questions.forEach((question) => {
                 if (question.options) {
                   question.options.sort(
@@ -81,18 +77,15 @@ export class TestService {
               });
             }
 
-            // Sort passages within each part
             if (part.passages) {
               part.passages.sort((a, b) => a.id - b.id);
 
-              // Sort questions within each passage
               part.passages.forEach((passage) => {
                 if (passage.questions) {
                   passage.questions.sort(
                     (a, b) => a.question_number - b.question_number,
                   );
 
-                  // Sort options within each question
                   passage.questions.forEach((question) => {
                     if (question.options) {
                       question.options.sort(
@@ -109,6 +102,14 @@ export class TestService {
     }
 
     return test;
+  }
+
+  buildTestResponse(test: Test): { test: Test } {
+    return { test };
+  }
+
+  buildTestsResponse(tests: Test[]): { tests: Test[] } {
+    return { tests };
   }
 }
 
