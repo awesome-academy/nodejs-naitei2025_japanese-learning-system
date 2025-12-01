@@ -1,15 +1,12 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { 
   CheckCircle, 
   Clock, 
-  TrendingUp, 
-  Award,
   Settings,
   Edit2,
   Lock,
-  Eye,
-  EyeOff,
   Upload,
   X,
   AlertCircle
@@ -17,7 +14,8 @@ import {
 import { dataService } from '../services';
 import { useAuthStore } from '../store/useAuthStore';
 import { HTMLRenderer } from '../components/HTMLRenderer';
-import type { IUserUpdate, IPasswordChange } from '../types';
+import { ChangePasswordModal } from '../components/ChangePasswordModal';
+import type { IUserUpdate } from '../types';
 
 export function ProfilePage() {
   const { t } = useTranslation();
@@ -29,16 +27,6 @@ export function ProfilePage() {
     full_name: user?.full_name || '',
     email: user?.email || '',
     urlAvatar: user?.urlAvatar || '',
-  });
-  const [passwordData, setPasswordData] = useState({
-    current_password: '',
-    new_password: '',
-    confirmPassword: '',
-  });
-  const [showPasswords, setShowPasswords] = useState({
-    current: false,
-    new: false,
-    confirm: false,
   });
   const [previewAvatar, setPreviewAvatar] = useState(user?.urlAvatar || '');
   const [tempAvatar, setTempAvatar] = useState(user?.urlAvatar || '');
@@ -62,11 +50,6 @@ export function ProfilePage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setPasswordData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -131,39 +114,6 @@ export function ProfilePage() {
     setError(null);
   };
 
-  const handleSavePassword = async () => {
-    if (passwordData.new_password !== passwordData.confirmPassword) {
-      setError(t('profile.confirmNewPassword'));
-      return;
-    }
-    
-    setIsSaving(true);
-    setError(null);
-    try {
-      const changePasswordData: IPasswordChange = {
-        current_password: passwordData.current_password,
-        new_password: passwordData.new_password,
-      };
-      
-      await dataService.changePassword(changePasswordData);
-      
-      setPasswordData({
-        current_password: '',
-        new_password: '',
-        confirmPassword: '',
-      });
-      setShowPasswordModal(false);
-      setSuccessMessage(t('profile.passwordSuccess'));
-      setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (error) {
-      console.error('Failed to change password:', error);
-      const errorMessage = error instanceof Error ? error.message : t('common.error');
-      setError(errorMessage);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handleSave = async () => {
     setIsSaving(true);
     setError(null);
@@ -198,6 +148,11 @@ export function ProfilePage() {
       setTempAvatar(user.urlAvatar || '');
     }
     setIsEditing(false);
+  };
+
+  const handlePasswordSuccess = (message: string) => {
+    setSuccessMessage(message);
+    setTimeout(() => setSuccessMessage(null), 3000);
   };
 
   return (
@@ -361,7 +316,7 @@ export function ProfilePage() {
       </div>
       
       {/* Avatar Modal */}
-      {showAvatarModal && (
+      {showAvatarModal && createPortal(
         <>
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40" onClick={handleCancelAvatar} />
           <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md">
@@ -455,125 +410,16 @@ export function ProfilePage() {
               </div>
             </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
 
       {/* Password Modal */}
-      {showPasswordModal && (
-        <>
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40" onClick={() => setShowPasswordModal(false)} />
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border-2 border-gray-200 dark:border-slate-700 p-6">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                {t('profile.changePasswordTitle')}
-              </h3>
-              
-              {error && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-500 dark:border-red-600 rounded-lg flex items-center space-x-2 text-red-700 dark:text-red-300 text-sm">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <p>{error}</p>
-                </div>
-              )}
-              
-              <div className="space-y-4">
-                {/* Current Password */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">
-                    {t('profile.currentPassword')}
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPasswords.current ? 'text' : 'password'}
-                      name="current_password"
-                      value={passwordData.current_password}
-                      onChange={handlePasswordChange}
-                      className="w-full px-4 py-3 pr-12 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                      placeholder="••••••••"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPasswords(prev => ({ ...prev, current: !prev.current }))}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                    >
-                      {showPasswords.current ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-                </div>
-
-                {/* New Password */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">
-                    {t('profile.newPassword')}
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPasswords.new ? 'text' : 'password'}
-                      name="new_password"
-                      value={passwordData.new_password}
-                      onChange={handlePasswordChange}
-                      className="w-full px-4 py-3 pr-12 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                      placeholder="••••••••"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                    >
-                      {showPasswords.new ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Confirm Password */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">
-                    {t('profile.confirmNewPassword')}
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPasswords.confirm ? 'text' : 'password'}
-                      name="confirmPassword"
-                      value={passwordData.confirmPassword}
-                      onChange={handlePasswordChange}
-                      className="w-full px-4 py-3 pr-12 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                      placeholder="••••••••"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                    >
-                      {showPasswords.confirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Buttons */}
-                <div className="flex gap-3 pt-2">
-                  <button
-                    onClick={() => {
-                      setPasswordData({ current_password: '', new_password: '', confirmPassword: '' });
-                      setShowPasswordModal(false);
-                      setError(null);
-                    }}
-                    disabled={isSaving}
-                    className="flex-1 px-4 py-3 bg-gray-200 dark:bg-slate-800 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
-                  >
-                    {t('common.cancel')}
-                  </button>
-                  <button
-                    onClick={handleSavePassword}
-                    disabled={isSaving || !passwordData.current_password || !passwordData.new_password || !passwordData.confirmPassword}
-                    className="flex-1 px-4 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-bold hover:shadow-lg hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100"
-                  >
-                    {isSaving ? t('profile.updating') : t('profile.updatePassword')}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
+      <ChangePasswordModal 
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+        onSuccess={handlePasswordSuccess}
+      />
     </div>
   );
 }
