@@ -359,40 +359,7 @@ export function ProfilePage() {
           </div>
         </div>
       </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl p-5 text-white shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
-              <Award className="w-5 h-5" />
-            </div>
-            <div className="text-3xl font-black">0</div>
-          </div>
-          <p className="text-sm font-bold opacity-90">{t('history.completedTests')}</p>
-        </div>
-
-        <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl p-5 text-white shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5" />
-            </div>
-            <div className="text-3xl font-black">0%</div>
-          </div>
-          <p className="text-sm font-bold opacity-90">{t('history.avgScore')}</p>
-        </div>
-
-        <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl p-5 text-white shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
-              <Clock className="w-5 h-5" />
-            </div>
-            <div className="text-3xl font-black">0h</div>
-          </div>
-          <p className="text-sm font-bold opacity-90">{t('profile.studyTime')}</p>
-        </div>
-      </div>
-
+      
       {/* Avatar Modal */}
       {showAvatarModal && (
         <>
