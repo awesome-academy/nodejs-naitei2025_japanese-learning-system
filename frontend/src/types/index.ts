@@ -243,7 +243,7 @@ export interface IUserUpdate {
 
 export interface IPasswordChange {
   currentPassword: string;
-  newPassword: string;
+  password: string; // Backend expects `password` in UpdateUserDto
 }
 
 // ============================================================================
