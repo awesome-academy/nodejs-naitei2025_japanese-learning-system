@@ -25,7 +25,9 @@ async function startApp() {
       },
     }),
   );
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const env = validateEnv();
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
   await app.listen(env.PORT);
 }
 void startApp();

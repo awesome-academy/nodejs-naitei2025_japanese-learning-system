@@ -24,4 +24,3 @@ export class TestController {
     return this.testService.buildTestResponse(test);
   }
 }
-

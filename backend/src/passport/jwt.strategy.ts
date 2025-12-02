@@ -6,7 +6,7 @@ import { validateEnv } from 'src/config/env.validation';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
-// Validate environment variables on module load
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 const env = validateEnv();
 
 @Injectable()
@@ -17,6 +17,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       secretOrKey: env.JWT_SECRET,
     });
   }
