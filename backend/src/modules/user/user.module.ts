@@ -6,7 +6,7 @@ import { User } from 'src/entities/users.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { validateEnv } from 'src/config/env.validation';
 
-// Validate environment variables on module load
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 const env = validateEnv();
 
 @Module({
@@ -15,6 +15,7 @@ const env = validateEnv();
   imports: [
     TypeOrmModule.forFeature([User]),
     JwtModule.register({
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       secret: env.JWT_SECRET,
       signOptions: { expiresIn: '15m' },
     }),

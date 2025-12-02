@@ -5,7 +5,9 @@ import { Question } from './questions.entity';
 
 @Entity('options')
 export class Option extends BaseEntity {
-  @ManyToOne(() => Question, (q) => q.options, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Question, (question) => question.options, {
+    onDelete: 'CASCADE',
+  })
   question: Question;
 
   @Column({ type: 'text' })

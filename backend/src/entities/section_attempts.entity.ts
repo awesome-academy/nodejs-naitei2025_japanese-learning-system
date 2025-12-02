@@ -15,7 +15,7 @@ export class SectionAttempt extends BaseEntity {
   @ManyToOne(() => Section, { onDelete: 'CASCADE' })
   section: Section;
 
-  @Column({ length: 20 })
+  @Column({ length: 20, default: 'NOT_STARTED' })
   status: 'NOT_STARTED' | 'IN_PROGRESS' | 'PAUSED' | 'COMPLETED';
 
   @Column({ type: 'int', nullable: true })
