@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Test } from '../../entities/tests.entity';
+import { Section } from 'src/entities/sections.entity';
 
 @Injectable()
 export class TestService {
@@ -26,25 +27,48 @@ export class TestService {
     return queryBuilder.getMany();
   }
 
-  async findOne(id: number): Promise<Test> {
+  async findOne(id: number): Promise<any> {
     const test = await this.testRepository.findOne({
       where: { id },
       relations: {
         sections: true,
       },
       order: {
-        sections: {
-          order_index: 'ASC',
-        },
+        sections: { order_index: 'ASC' },
       },
     });
+
     if (!test) {
       throw new NotFoundException(`Test with ID ${id} not found`);
     }
 
-    if (test.sections) {
-      test.sections.sort((a, b) => a.order_index - b.order_index);
+    interface SectionQuestionCount {
+      sectionId: number;
+      count: number;
     }
+
+    const questionCounts = await this.testRepository.manager
+      .createQueryBuilder()
+      .select('section.id', 'sectionId')
+      .addSelect('COUNT(question.id)', 'count')
+      .from(Section, 'section')
+      .leftJoin('section.parts', 'part')
+      .leftJoin('part.questions', 'question')
+      .where('section.testId = :testId', { testId: id })
+      .groupBy('section.id')
+      .getRawMany<SectionQuestionCount>();
+
+    // Map sectionId → count
+    const countMap = new Map<number, number>();
+    questionCounts.forEach((row) => {
+      countMap.set(Number(row.sectionId), Number(row.count));
+    });
+
+    test.sections = test.sections.map((section) => ({
+      ...section,
+      question_count: countMap.get(section.id) || 0,
+    }));
+
     return test;
   }
 
