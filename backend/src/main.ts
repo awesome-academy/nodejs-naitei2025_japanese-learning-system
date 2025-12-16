@@ -14,11 +14,19 @@ validateEnv();
 
 async function startApp() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // ✅ Allow frontend to call backend (handles OPTIONS preflight)
+  app.enableCors({
+    origin: ['http://localhost:5173'],
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+    optionsSuccessStatus: 204,
+  });
+
   app.setGlobalPrefix('api');
 
   // Serve static files from uploads directory
-  // Images: http://localhost:3000/api/uploads/images/filename.png
-  // Audio: http://localhost:3000/api/uploads/audio/filename.mp3
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
     prefix: '/api/uploads/',
   });
@@ -35,9 +43,8 @@ async function startApp() {
       },
     }),
   );
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
   const env = validateEnv();
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
   await app.listen(env.PORT);
 }
 void startApp();
