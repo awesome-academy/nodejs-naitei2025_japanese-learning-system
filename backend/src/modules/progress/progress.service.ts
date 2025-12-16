@@ -244,6 +244,81 @@ export class ProgressService {
     return attempts;
   }
 
+  async startSectionAttemptBySectionId(
+    userId: number,
+    sectionId: number,
+  ): Promise<SectionAttempt> {
+    //Load section + test
+    const section = await this.sectionRepo.findOne({
+      where: { id: sectionId },
+      relations: ['test', 'parts', 'parts.questions'],
+    });
+
+    if (!section) {
+      throw new NotFoundException('Section not found');
+    }
+
+    const test = section.test;
+
+    //Tìm test attempt CHƯA COMPLETED
+    let testAttempt = await this.testAttemptRepo.findOne({
+      where: {
+        user: { id: userId },
+        test: { id: test.id },
+        is_completed: false,
+      },
+      relations: ['section_attempts'],
+    });
+
+    //Nếu chưa có → tạo test attempt mới
+    if (!testAttempt) {
+      const user = await this.userRepo.findOne({
+        where: { id: userId },
+      });
+      if (!user) throw new NotFoundException('User not found');
+
+      testAttempt = this.testAttemptRepo.create({
+        user,
+        test,
+        is_completed: false,
+        started_at: new Date(),
+      });
+
+      await this.testAttemptRepo.save(testAttempt);
+    }
+
+    // Check section attempt đã tồn tại chưa
+    const existingSectionAttempt = await this.sectionAttemptRepo.findOne({
+      where: {
+        test_attempt: { id: testAttempt.id },
+        section: { id: section.id },
+      },
+    });
+
+    if (existingSectionAttempt) {
+      return existingSectionAttempt;
+    }
+
+    // Tính số câu hỏi
+    const questionCount = section.parts.reduce(
+      (sum, part) => sum + (part.questions?.length || 0),
+      0,
+    );
+
+    // Tạo section attempt
+    const sectionAttempt = this.sectionAttemptRepo.create({
+      test_attempt: testAttempt,
+      section,
+      status: 'IN_PROGRESS',
+      question_count: questionCount,
+      time_remaining: section.time_limit * 60,
+    });
+
+    await this.sectionAttemptRepo.save(sectionAttempt);
+
+    return sectionAttempt;
+  }
+
   async getSection(sectionId: number): Promise<SectionResponseDto> {
     const section = await this.sectionRepo.findOne({
       where: { id: sectionId },
@@ -320,7 +395,12 @@ export class ProgressService {
     // Verify section attempt belongs to user
     const relations = ['test_attempt', 'test_attempt.user'];
     if (includeCorrectAnswer) {
-      relations.push('section', 'section.parts', 'section.parts.questions', 'section.parts.questions.options');
+      relations.push(
+        'section',
+        'section.parts',
+        'section.parts.questions',
+        'section.parts.questions.options',
+      );
     }
 
     const sectionAttempt = await this.sectionAttemptRepo.findOne({

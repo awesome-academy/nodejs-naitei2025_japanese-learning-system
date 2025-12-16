@@ -11,7 +11,11 @@ export class TestService {
     private readonly testRepository: Repository<Test>,
   ) {}
 
-  async findAll(level?: string, year?: number): Promise<Test[]> {
+  async findAll(
+    level?: string,
+    year?: number,
+    skill?: string,
+  ): Promise<Test[]> {
     const queryBuilder = this.testRepository.createQueryBuilder('test');
 
     if (level) {
@@ -22,12 +26,16 @@ export class TestService {
       queryBuilder.andWhere('test.year = :year', { year });
     }
 
+    if (skill && skill !== 'all') {
+      queryBuilder.andWhere('test.skill = :skill', { skill });
+    }
+
     queryBuilder.orderBy('test.year', 'DESC').addOrderBy('test.month', 'DESC');
 
     return queryBuilder.getMany();
   }
 
-  async findOne(id: number): Promise<any> {
+  async findOne(id: number): Promise<Test> {
     const test = await this.testRepository.findOne({
       where: { id },
       relations: {
