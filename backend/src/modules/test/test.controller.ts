@@ -19,9 +19,10 @@ export class TestController {
   async findAll(
     @Query('level') level?: string,
     @Query('year') year?: string,
+    @Query('skill') skill?: string,
   ): Promise<{ tests: Test[] }> {
     const yearNumber = year ? parseInt(year, 10) : undefined;
-    const tests = await this.testService.findAll(level, yearNumber);
+    const tests = await this.testService.findAll(level, yearNumber, skill);
     return this.testService.buildTestsResponse(tests);
   }
 

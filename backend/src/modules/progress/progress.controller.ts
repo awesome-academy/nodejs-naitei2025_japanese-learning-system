@@ -99,6 +99,27 @@ export class ProgressController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Post('section-attempt/start/:sectionId')
+  async startSectionAttempt(
+    @Param('sectionId', ParseIntPipe) sectionId: number,
+    @Request() req,
+  ): Promise<{ sectionAttempt: SectionAttemptResponseDto }> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const userId = req.user.userId as number;
+
+    const sectionAttempt =
+      await this.progressService.startSectionAttemptBySectionId(
+        userId,
+        sectionId,
+      );
+
+    const response =
+      this.progressService.buildSectionAttemptResponse(sectionAttempt);
+
+    return { sectionAttempt: response };
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get('section/:id')
   async getSection(
     @Param('id', ParseIntPipe) sectionId: number,
