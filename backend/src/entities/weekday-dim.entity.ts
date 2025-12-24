@@ -8,4 +8,3 @@ export class WeekdayDim {
   @Column({ type: 'varchar', length: 20 })
   name: string; // "Thứ 2", "Thứ 3", ..., "Chủ nhật"
 }
-

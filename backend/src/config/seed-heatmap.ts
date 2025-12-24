@@ -54,4 +54,3 @@ export async function seedHeatmapData(dataSource: DataSource): Promise<void> {
     console.log('✅ Seeded LoginHeatmap: 7 rows initialized');
   }
 }
-

@@ -18,4 +18,3 @@ import { TestAttempt } from '../../entities/test_attempts.entity';
   ],
 })
 export class AnalyticsModule {}
-
