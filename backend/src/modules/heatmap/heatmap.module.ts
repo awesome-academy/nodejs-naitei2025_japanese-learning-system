@@ -10,4 +10,3 @@ import { WeekdayDim } from '../../entities/weekday-dim.entity';
   exports: [HeatmapService],
 })
 export class HeatmapModule {}
-

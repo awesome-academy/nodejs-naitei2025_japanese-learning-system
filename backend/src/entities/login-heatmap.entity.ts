@@ -47,4 +47,3 @@ export class LoginHeatmap {
   @Column({ name: 'h22_24', type: 'int', default: 0 })
   h22_24: number;
 }
-

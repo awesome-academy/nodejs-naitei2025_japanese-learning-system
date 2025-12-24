@@ -11,17 +11,14 @@ export class LoginHeatmapMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {
     // Gọi increment heatmap bất đồng bộ, không chặn luồng
     // Kể cả login fail thì vẫn ghi nhận request
-    this.heatmapService
-      .incrementLoginHeatmap(new Date())
-      .catch((error) => {
-        // Log lỗi nhưng không throw để không làm hỏng login flow
-        this.logger.error(
-          `Failed to record login heatmap: ${error instanceof Error ? error.message : String(error)}`,
-        );
-      });
+    this.heatmapService.incrementLoginHeatmap(new Date()).catch((error) => {
+      // Log lỗi nhưng không throw để không làm hỏng login flow
+      this.logger.error(
+        `Failed to record login heatmap: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    });
 
     // Tiếp tục luồng bình thường
     next();
   }
 }
-

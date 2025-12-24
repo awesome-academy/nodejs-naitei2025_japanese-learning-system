@@ -7,6 +7,7 @@ import { UserModule } from '../user/user.module';
 import { RateLimitGuard } from 'src/guards/rate-limit.guard';
 import { Test } from '../../entities/tests.entity';
 import { TestAttempt } from '../../entities/test_attempts.entity';
+import { UserAnswer } from 'src/entities/user_answers.entity';
 
 @Module({
   controllers: [AnalyticsController],
@@ -14,8 +15,7 @@ import { TestAttempt } from '../../entities/test_attempts.entity';
   imports: [
     HeatmapModule,
     UserModule,
-    TypeOrmModule.forFeature([Test, TestAttempt]),
+    TypeOrmModule.forFeature([Test, TestAttempt, UserAnswer]),
   ],
 })
 export class AnalyticsModule {}
-
