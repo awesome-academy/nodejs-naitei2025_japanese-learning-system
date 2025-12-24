@@ -6,6 +6,7 @@ import {
   Request,
   BadRequestException,
   Query,
+  Param,
 } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
@@ -22,7 +23,7 @@ export class AnalyticsController {
   @UseGuards(JwtAuthGuard)
   @Get('heatmap/login')
   async getLoginHeatmap(@Request() req) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const userId = req.user.userId as number;
 
     // Kiểm tra quyền admin
@@ -37,7 +38,7 @@ export class AnalyticsController {
   @UseGuards(RateLimitGuard, JwtAuthGuard)
   @Post('heatmap/login/reset')
   async resetLoginHeatmap(@Request() req) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const userId = req.user.userId as number;
 
     // Kiểm tra quyền admin
@@ -59,7 +60,7 @@ export class AnalyticsController {
     @Query('level') level?: string,
     @Query('limit') limit?: string,
   ) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const userId = req.user.userId as number;
 
     // Kiểm tra quyền admin
@@ -80,5 +81,13 @@ export class AnalyticsController {
       level,
       limit: limitNum,
     });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('test/:testId/statistics')
+  async getStatistics(@Param('testId') testId: string, @Request() req) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const userId = req.user.userId as number;
+    return this.analyticsService.getTestStatistics(Number(testId), userId);
   }
 }

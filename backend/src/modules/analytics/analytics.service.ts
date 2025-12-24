@@ -1,9 +1,32 @@
-import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { HeatmapService } from '../heatmap/heatmap.service';
 import { Test } from '../../entities/tests.entity';
 import { TestAttempt } from '../../entities/test_attempts.entity';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { UserAnswer } from 'src/entities/user_answers.entity';
+import { UserService } from '../user/user.service';
+import { TestStatisticsResponseDto } from './dto/test-statistics-response.dto';
+
+interface RawTestStatistic {
+  section_id: number;
+  section_name: string;
+  question_number: number;
+  total_count: string;
+  correct_count: string;
+}
+
+interface QuestionStat {
+  questionNumber: number;
+  correctCount: number;
+  totalCount: number;
+  correctRate: number;
+}
+
+interface SectionStat {
+  sectionName: string;
+  questions: QuestionStat[];
+}
 
 @Injectable()
 export class AnalyticsService {
@@ -13,6 +36,10 @@ export class AnalyticsService {
     private readonly testRepo: Repository<Test>,
     @InjectRepository(TestAttempt)
     private readonly testAttemptRepo: Repository<TestAttempt>,
+    private readonly userService: UserService,
+
+    @InjectRepository(UserAnswer)
+    private readonly userAnswerRepo: Repository<UserAnswer>,
   ) {}
 
   async getLoginHeatmap() {
@@ -50,9 +77,7 @@ export class AnalyticsService {
     defaultFrom.setDate(defaultFrom.getDate() - 30);
     defaultFrom.setHours(0, 0, 0, 0); // Start of day
 
-    const fromDate = params.from
-      ? new Date(params.from)
-      : defaultFrom;
+    const fromDate = params.from ? new Date(params.from) : defaultFrom;
     fromDate.setHours(0, 0, 0, 0);
 
     const toDate = params.to ? new Date(params.to) : today;
@@ -102,8 +127,7 @@ export class AnalyticsService {
       const passed = parseInt(String(row.passed || 0), 10);
 
       const attemptCount = completed; // = completed (số lượt làm bài)
-      const passRate =
-        completed > 0 ? (passed / completed) * 100 : 0;
+      const passRate = completed > 0 ? (passed / completed) * 100 : 0;
       const completionRate = started > 0 ? (completed / started) * 100 : 0;
 
       return {
@@ -122,6 +146,71 @@ export class AnalyticsService {
       from: fromDate.toISOString().split('T')[0], // YYYY-MM-DD
       to: toDate.toISOString().split('T')[0], // YYYY-MM-DD
       items,
+    };
+  }
+
+  async getTestStatistics(
+    testId: number,
+    userId: number,
+  ): Promise<TestStatisticsResponseDto> {
+    const isAdmin = await this.userService.is_admin(userId);
+    if (!isAdmin) {
+      throw new BadRequestException('Only admin can access this resource');
+    }
+
+    const rawStats = await this.userAnswerRepo
+      .createQueryBuilder('ua')
+      .innerJoin('ua.question', 'q')
+      .innerJoin('q.part', 'p')
+      .innerJoin('p.section', 's')
+      .innerJoin('ua.section_attempt', 'sa')
+      .innerJoin('sa.test_attempt', 'ta')
+      .select([
+        's.id AS section_id',
+        's.name AS section_name',
+        'q.question_number AS question_number',
+        // Tổng số người làm câu này
+        'COUNT(DISTINCT ta.id) AS total_count',
+        // Tổng số người làm đúng câu này
+        `
+        COUNT(DISTINCT CASE
+          WHEN ua.is_correct = true THEN ta.id
+          ELSE NULL
+        END) AS correct_count
+        `,
+      ])
+      .where('ta.testId = :testId', { testId })
+      .groupBy('s.id')
+      .addGroupBy('q.id')
+      .addGroupBy('q.question_number')
+      .orderBy('s.id', 'ASC')
+      .addOrderBy('q.question_number', 'ASC')
+      .getRawMany<RawTestStatistic>();
+
+    const sectionMap = new Map<number, SectionStat>();
+
+    for (const row of rawStats) {
+      if (!sectionMap.has(row.section_id)) {
+        sectionMap.set(row.section_id, {
+          sectionName: row.section_name,
+          questions: [],
+        });
+      }
+
+      sectionMap.get(row.section_id)!.questions.push({
+        questionNumber: row.question_number,
+        correctCount: Number(row.correct_count),
+        totalCount: Number(row.total_count),
+        correctRate:
+          Number(row.total_count) === 0
+            ? 0
+            : Number(row.correct_count) / Number(row.total_count),
+      });
+    }
+
+    return {
+      testId,
+      sections: Array.from(sectionMap.values()),
     };
   }
 }
