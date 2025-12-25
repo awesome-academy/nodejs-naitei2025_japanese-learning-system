@@ -25,6 +25,8 @@ interface ExamLayoutProps {
     selected_option_id: number | null;
   }>;
   testAttemptId?: number | null;
+  isSkillPractice?: boolean; // Flag to indicate skill practice mode
+  onBackToSections?: () => void; // Callback to navigate back to sections
 }
 
 export const ExamLayout: React.FC<ExamLayoutProps> = ({
@@ -38,6 +40,8 @@ export const ExamLayout: React.FC<ExamLayoutProps> = ({
   correctCount,
   resultQuestions = [],
   testAttemptId,
+  isSkillPractice = false,
+  onBackToSections,
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -119,7 +123,9 @@ export const ExamLayout: React.FC<ExamLayoutProps> = ({
     setShowExitModal(false);
     if (mode === 'review') {
       // Review mode - thoát trực tiếp
-      if (testAttemptId) {
+      if (isSkillPractice && onBackToSections) {
+        onBackToSections();
+      } else if (testAttemptId) {
         navigate(`/testAttempts/${testAttemptId}`);
       } else {
         navigate('/tests');
@@ -133,7 +139,9 @@ export const ExamLayout: React.FC<ExamLayoutProps> = ({
         await onPause();
       }
       
-      if (testAttemptId) {
+      if (isSkillPractice && onBackToSections) {
+        onBackToSections();
+      } else if (testAttemptId) {
         navigate(`/testAttempts/${testAttemptId}`);
       } else {
         navigate('/tests');
@@ -142,6 +150,12 @@ export const ExamLayout: React.FC<ExamLayoutProps> = ({
   };
 
   const handleSubmitClick = () => {
+    // Skill practice: submit directly without pause option
+    if (isSkillPractice) {
+      setShowSubmitModal(true);
+      return;
+    }
+    
     // If there's still time, ask if user wants to pause or submit
     if (mode === 'exam' && timeRemaining > 0) {
       setShowPauseModal(true);
@@ -160,7 +174,9 @@ export const ExamLayout: React.FC<ExamLayoutProps> = ({
       await onPause();
     }
     
-    if (testAttemptId) {
+    if (isSkillPractice && onBackToSections) {
+      onBackToSections();
+    } else if (testAttemptId) {
       navigate(`/testAttempts/${testAttemptId}`);
     } else {
       navigate('/tests');
@@ -179,13 +195,27 @@ export const ExamLayout: React.FC<ExamLayoutProps> = ({
         <div className="px-4 py-2.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => mode === 'review' ? handleExit() : setShowExitModal(true)}
+              onClick={() => {
+                if (mode === 'review') {
+                  handleExit();
+                } else if (isSkillPractice) {
+                  // Skill practice: thoát trực tiếp không cần modal
+                  if (onBackToSections) {
+                    onBackToSections();
+                  } else {
+                    navigate('/skills');
+                  }
+                } else {
+                  // Normal exam: show exit modal
+                  setShowExitModal(true);
+                }
+              }}
               className="text-white dark:text-emerald-400 hover:bg-white/20 dark:hover:bg-emerald-900/20 rounded-xl transition-all p-1"
             >
               <X className="w-5 h-5" />
             </button>
             <h1 className="text-base font-bold text-white dark:text-white">
-              {mode === 'exam' ? t('exam.title') : t('exam.reviewTitle')}
+              {mode === 'exam' ? t('exam.title', 'Làm bài thi') : t('exam.reviewTitle', 'Xem lại bài thi')}
             </h1>
           </div>
 
@@ -278,7 +308,7 @@ export const ExamLayout: React.FC<ExamLayoutProps> = ({
               <div className="absolute inset-0 bg-gradient-to-br from-teal-50/50 to-transparent dark:from-teal-900/10 rounded-xl pointer-events-none"></div>
               <div className="relative">
                 <h3 className="text-xs font-bold text-gray-900 dark:text-white mb-2">
-                  問題番号
+                  {t('exam.questionNumbers', 'Số câu hỏi')}
                 </h3>
                 <div className="grid grid-cols-7 gap-1.5">
                   {Array.from({ length: totalQuestions }, (_, i) => {
@@ -304,30 +334,30 @@ export const ExamLayout: React.FC<ExamLayoutProps> = ({
                     <>
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded flex-shrink-0" />
-                        <span className="text-gray-600 dark:text-gray-400">未回答</span>
+                        <span className="text-gray-600 dark:text-gray-400">{t('exam.palette.unanswered', 'Chưa trả lời')}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 bg-yellow-400 rounded flex-shrink-0" />
-                        <span className="text-gray-600 dark:text-gray-400">回答済み</span>
+                        <span className="text-gray-600 dark:text-gray-400">{t('exam.palette.answered', 'Đã trả lời')}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 bg-orange-400 rounded flex-shrink-0" />
-                        <span className="text-gray-600 dark:text-gray-400">要確認</span>
+                        <span className="text-gray-600 dark:text-gray-400">{t('exam.palette.marked', 'Đánh dấu')}</span>
                       </div>
                     </>
                   ) : (
                     <>
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 bg-green-500 rounded flex-shrink-0" />
-                        <span className="text-gray-600 dark:text-gray-400">正解</span>
+                        <span className="text-gray-600 dark:text-gray-400">{t('exam.palette.correct', 'Đúng')}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 bg-red-500 rounded flex-shrink-0" />
-                        <span className="text-gray-600 dark:text-gray-400">不正解</span>
+                        <span className="text-gray-600 dark:text-gray-400">{t('exam.palette.wrong', 'Sai')}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 bg-gray-400 rounded flex-shrink-0" />
-                        <span className="text-gray-600 dark:text-gray-400">未回答</span>
+                        <span className="text-gray-600 dark:text-gray-400">{t('exam.palette.unanswered', 'Chưa trả lời')}</span>
                       </div>
                     </>
                   )}
@@ -360,37 +390,39 @@ export const ExamLayout: React.FC<ExamLayoutProps> = ({
       </div>
 
       {/* Modals */}
-      {/* Pause Modal - Shows when submitting with time remaining */}
-      <ConfirmModal
-        isOpen={showPauseModal}
-        onClose={handlePauseModalClose}
-        onConfirm={handleSubmitNow}
-        title="Bạn còn thời gian"
-        message={`Bạn còn ${formatTime(timeRemaining)} để hoàn thành bài thi. Bạn muốn tạm dừng để làm tiếp sau hay nộp bài ngay?`}
-        confirmText="Nộp bài ngay"
-        cancelText="Tạm dừng"
-        variant="warning"
-      />
+      {/* Pause Modal - Shows when submitting with time remaining (not for skill practice) */}
+      {!isSkillPractice && (
+        <ConfirmModal
+          isOpen={showPauseModal}
+          onClose={handlePauseModalClose}
+          onConfirm={handleSubmitNow}
+          title={t('exam.actions.pauseAndExit')}
+          message={`${t('common.timeRemaining')}: ${formatTime(timeRemaining)}`}
+          confirmText={t('exam.actions.submitNow')}
+          cancelText={t('exam.actions.pauseAndExit')}
+          variant="warning"
+        />
+      )}
 
       <ConfirmModal
         isOpen={showSubmitModal}
         onClose={() => setShowSubmitModal(false)}
         onConfirm={onSubmit}
-        title={t('exam.submitConfirmTitle')}
-        message={t('exam.submitConfirmMessage')}
+        title={isSkillPractice ? t('skills.submitPracticeTitle') : t('exam.submitConfirmTitle')}
+        message={isSkillPractice ? t('skills.submitPracticeMessage') : t('exam.submitConfirmMessage')}
         confirmText={t('exam.submit')}
         variant="warning"
       />
 
-      {/* Exit Modal - Chỉ hiển thị ở exam mode */}
-      {mode === 'exam' && (
+      {/* Exit Modal - Chỉ hiển thị ở exam mode (không hiển thị cho skill practice) */}
+      {mode === 'exam' && !isSkillPractice && (
         <ConfirmModal
           isOpen={showExitModal}
           onClose={() => setShowExitModal(false)}
           onConfirm={handleExit}
-          title="Thoát bài thi"
-          message="Bài thi sẽ được tạm dừng và bạn có thể tiếp tục làm vào lần sau. Bạn có chắc muốn thoát?"
-          confirmText="Thoát và tạm dừng"
+          title={t('exam.actions.confirmExit')}
+          message={t('exam.actions.exitMessage')}
+          confirmText={t('exam.actions.pauseAndExit')}
           variant="warning"
         />
       )}

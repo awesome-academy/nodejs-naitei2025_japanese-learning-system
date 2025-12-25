@@ -22,6 +22,10 @@ import type {
   SkillType,
   ISectionWithParts,
   IAnswer,
+  ILoginHeatmapData,
+  ITestFunnelData,
+  ITestStatistics,
+  IAdminOverview,
 } from '../types';
 
 export interface IDataService {
@@ -124,7 +128,7 @@ export interface IDataService {
   // ============================================================================
   // Section Attempt Management
   // ============================================================================
-
+   startSectionAttempt(sectionId: number): Promise<ISectionAttempt>;
   /**
    * Get section attempt detail (includes user answers and correct answers if completed)
    * @param attemptId - Section attempt ID
@@ -179,16 +183,48 @@ export interface IDataService {
   getAllUsers(search?: string): Promise<IUser[]>;
 
   /**
-   * Get test statistics (completed attempts count)
-   * @param testId - Optional specific test ID
+   * Get completed test attempts for a specific test (for admin)
+   * @param testId - Test ID
+   * @returns Promise resolving to array of completed test attempts
+   */
+  getCompletedAttemptsByTest(testId: number): Promise<ITestAttempt[]>;
+
+  // ============================================================================
+  // Admin Analytics
+  // ============================================================================
+
+  /**
+   * Get login heatmap data (12 time slots x 7 weekdays)
+   * @returns Promise resolving to heatmap data
+   */
+  getLoginHeatmap(): Promise<ILoginHeatmapData>;
+
+  /**
+   * Reset login heatmap data (admin only)
+   * @returns Promise resolving to success response
+   */
+  resetLoginHeatmap(): Promise<{ success: boolean; message: string }>;
+
+  /**
+   * Get test funnel data with date range
+   * @param from - Start date (YYYY-MM-DD)
+   * @param to - End date (YYYY-MM-DD)
+   * @returns Promise resolving to funnel data
+   */
+  getTestFunnel(from: string, to: string): Promise<ITestFunnelData>;
+
+  /**
+   * Get test statistics with correct rate by question
+   * @param testId - Test ID
    * @returns Promise resolving to test statistics
    */
-  getTestStatistics(testId?: number): Promise<Array<{
-    testId: number;
-    testTitle: string;
-    completedAttempts: number;
-    totalAttempts: number;
-  }>>;
+  getTestStatistics(testId: number): Promise<ITestStatistics>;
+
+  /**
+   * Get admin overview statistics
+   * @returns Promise resolving to overview data
+   */
+  getAdminOverview(): Promise<IAdminOverview>;
 
    // ============================================================================
   // Test Management

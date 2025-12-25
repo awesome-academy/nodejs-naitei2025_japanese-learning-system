@@ -81,20 +81,6 @@ export function SkillCard({ test }: SkillCardProps) {
             <Zap className="w-3 h-3" />
             {t('skills.practice', 'Luyện kỹ năng')}
           </div>
-
-          {isCompleted ? (
-            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded">
-              {t('tests.status.completed', '✓ Hoàn thành')}
-            </span>
-          ) : isAttempted ? (
-            <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded">
-              {t('tests.status.inProgress', '⏱ Đang luyện')}
-            </span>
-          ) : (
-            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-1 rounded animate-pulse">
-              {t('tests.status.new', '✨ Mới')}
-            </span>
-          )}
         </div>
 
         {/* CTA - Prominent with skill theme */}

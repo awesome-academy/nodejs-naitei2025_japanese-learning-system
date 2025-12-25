@@ -23,6 +23,11 @@ const resources = {
         close: 'Close',
         completed: 'Completed',
         viewAll: 'View All',
+        confirmDelete: 'Are you sure you want to delete',
+        confirmChange: 'Change role of',
+        notImplemented: 'This feature will be implemented later',
+        enable: 'enable',
+        disable: 'disable',
       },
       
       // Auth
@@ -414,6 +419,11 @@ const resources = {
         close: 'Đóng',
         completed: 'Hoàn thành',
         viewAll: 'Xem tất cả',
+        confirmDelete: 'Bạn có chắc muốn xóa',
+        confirmChange: 'Đổi vai trò',
+        notImplemented: 'Chức năng này sẽ được implement sau',
+        enable: 'kích hoạt',
+        disable: 'vô hiệu hóa',
       },
       
       auth: {
@@ -562,6 +572,9 @@ const resources = {
         timeRemaining: 'Còn lại',
         score: 'Điểm',
         correct: 'Đúng',
+        retrySection: 'Làm lại',
+        viewResults: 'Xem kết quả',
+        paused: 'Tạm dừng',
         // Test Attempts Page
         errorLoading: 'Không thể tải dữ liệu. Vui lòng thử lại.',
         totalAttempts: 'Tổng số lần làm',
@@ -574,6 +587,47 @@ const resources = {
         minutes: 'Phút',
       },
 
+      // Skill Practice
+      skills: {
+        sectionCount: '{{count}} phần',
+        noSections: 'Không có phần thi nào',
+        title: '🎯 Luyện kỹ năng',
+        subtitle: 'Chọn kỹ năng bạn muốn luyện tập',
+        practice: 'Luyện kỹ năng',
+        selectLevel: 'Chọn mức độ để bắt đầu luyện tập',
+        sections: 'Các phần thi',
+        goi: {
+          title: '語彙',
+          description: 'Luyện tập từ vựng tiếng Nhật',
+        },
+        bunpou: {
+          title: '文法',
+          description: 'Luyện tập ngữ pháp tiếng Nhật',
+        },
+        dokkai: {
+          title: '読解',
+          description: 'Luyện tập đọc hiểu tiếng Nhật',
+        },
+        choukai: {
+          title: '聴解',
+          description: 'Luyện tập nghe hiểu tiếng Nhật',
+        },
+        directStart: {
+          title: 'Luyện từng phần riêng lẻ',
+          description: 'Bạn có thể bắt đầu làm bất kỳ phần nào mà không cần hoàn thành toàn bộ đề thi. Chọn phần bạn muốn luyện tập và bắt đầu ngay!',
+        },
+        startSection: 'Bắt đầu',
+        practiceGuide: 'Hướng dẫn luyện tập',
+        selectSectionToPractice: 'Chọn phần thi bạn muốn luyện tập từ danh sách bên dưới',
+        completeSectionGuide: 'Hoàn thành tất cả câu hỏi trong thời gian quy định',
+        viewResultsGuide: 'Xem kết quả và đáp án chi tiết sau khi hoàn thành',
+        noSaveToHistory: 'Lưu ý: Kết quả luyện tập kỹ năng sẽ không được lưu vào lịch sử thi',
+        skillPracticeModeTitle: 'Chế độ luyện tập kỹ năng',
+        skillPracticeModeDesc: 'Bài thi luyện tập kỹ năng sẽ chỉ lưu kết quả tốt nhất của bạn.',
+        submitPracticeTitle: 'Nộp bài luyện tập',
+        submitPracticeMessage: 'Bạn có chắc muốn nộp bài? Kết quả sẽ không được lưu vào lịch sử thi.',
+      },
+
       // Exam Page
       exam: {
         question: 'Câu',
@@ -582,6 +636,115 @@ const resources = {
         explanation: 'Giải thích',
         markForReview: 'Đánh dấu để xem lại',
         sectionNotFound: 'Không tìm thấy phần thi',
+        actions: {
+          submitNow: 'Nộp bài ngay',
+          pauseAndExit: 'Tạm dừng',
+          resume: 'Tiếp tục',
+          confirmPause: 'Tạm dừng bài thi',
+          pauseMessage: 'Bạn có chắc muốn tạm dừng bài thi? Bạn có thể tiếp tục sau này.',
+          confirmExit: 'Thoát bài thi',
+          exitMessage: 'Bạn có chắc muốn thoát? Tiến độ sẽ được lưu.',
+        },
+      },
+
+      // Admin Page
+      admin: {
+        tabs: {
+          overview: 'Tổng quan',
+          analytics: 'Phân tích',
+          users: 'Người dùng',
+          tests: 'Bài test',
+        },
+        loading: 'Đang tải...',
+        apply: 'Áp dụng',
+        edit: 'Sửa',
+        add: 'Thêm',
+        create: 'Tạo',
+        search: 'Tìm kiếm',
+        notFound: 'Không tìm thấy',
+        actions: 'Thao tác',
+        
+        overview: {
+          title: 'Tổng người dùng',
+          activeUsers: 'Người dùng hoạt động',
+          tests: 'Đề thi',
+          activeTests: 'Đề thi hoạt động',
+          totalAttempts: 'Tổng lượt làm',
+          completedAttempts: 'Lượt làm hoàn thành',
+          averageScore: 'Điểm trung bình',
+          passRate: 'Tỷ lệ đạt',
+        },
+
+        users: {
+          title: 'Quản lý người dùng',
+          addUser: 'Thêm người dùng',
+          searchPlaceholder: 'Tìm kiếm người dùng (tên, email)...',
+          createdDate: 'Ngày tạo',
+          editUser: 'Sửa người dùng',
+          editFeatureMessage: 'Chức năng sửa user sẽ được implement sau',
+          createFeatureMessage: 'Chức năng tạo user mới sẽ được implement sau',
+          noUsers: 'Không tìm thấy người dùng',
+          user: 'Người dùng',
+          noUsersFound: 'Không có người dùng',
+          role: 'Vai trò',
+          clickToChangeRole: 'Click để đổi vai trò',
+        },
+
+        tests: {
+          title: 'Quản lý bài test',
+          addTest: 'Thêm bài test',
+          searchPlaceholder: 'Tìm kiếm bài test (tên, mã)...',
+          editTest: 'Sửa bài test',
+          editFeatureMessage: 'Chức năng sửa test sẽ được implement sau',
+          createFeatureMessage: 'Chức năng tạo test mới sẽ được implement sau',
+          noTests: 'Không có bài test',
+          status: 'Trạng thái',
+          active: 'Hoạt động',
+          inactive: 'Không hoạt động',
+          clickToActivate: 'Click để kích hoạt',
+          clickToDeactivate: 'Click để vô hiệu hóa',
+        },
+
+        analytics: {
+          title: 'Phân tích dữ liệu',
+          funnelAnalysis: 'Phân tích hiệu suất bài test',
+          difficultyAnalysis: 'Phân tích độ khó câu hỏi',
+          loginHeatmap: 'Bản đồ hoạt động đăng nhập',
+          skillAnalysis: 'Phân tích kỹ năng',
+          sortByAttempts: 'Tổng bài làm',
+          sortByPassRate: 'Tỉ lệ pass',
+          skillPeriod: 'Từ {from} đến {to}',
+        },
+
+        stats: {
+          total: 'Tổng',
+          hasData: 'Có data',
+          avgCorrect: 'TB đúng',
+        },
+
+        difficulty: {
+          easy: 'Dễ ≥70%',
+          medium: 'TB 40-69%',
+          hard: 'Khó <40%',
+          noData: 'Chưa có data',
+        },
+
+        skills: {
+          correct: 'Tỉ lệ đúng',
+          wrong: 'Tỉ lệ sai',
+          answers: 'Câu trả lời',
+          total: 'Tổng câu',
+          avgAccuracy: 'Độ chính xác',
+          wrongRate: 'Sai',
+        },
+
+        levels: {
+          n1: 'N1',
+          n2: 'N2',
+          n3: 'N3',
+          n4: 'N4',
+          n5: 'N5',
+        },
       },
       
     

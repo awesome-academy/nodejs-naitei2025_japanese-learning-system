@@ -93,6 +93,7 @@ export function TestCard({ test, skillMode = false }: TestCardProps) {
             {test.year}.{String(test.month).padStart(2, '0')}
           </div>
 
+          {/* Sửa logic hiển thị tag trạng thái */}
           {isCompleted ? (
             <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded">
               {t('tests.status.completed', '✓ Hoàn thành')}

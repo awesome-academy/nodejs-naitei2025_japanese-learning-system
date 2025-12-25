@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft } from 'lucide-react';
 import { dataService } from '../services';
 import type { ITestAttempt, ITestDetail } from '../types';
@@ -18,6 +19,7 @@ export function TestAttemptDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuthStore();
+  const { t } = useTranslation();
 
   const [testAttempt, setTestAttempt] = useState<ITestAttempt | null>(null);
   const [testDetail, setTestDetail] = useState<ITestDetail | null>(null);
@@ -74,13 +76,13 @@ export function TestAttemptDetailPage() {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'COMPLETED':
-        return '✓ Hoàn thành';
+        return `✓ ${t('tests.status.done')}`;
       case 'IN_PROGRESS':
-        return '⏱ Đang làm';
+        return `⏱ ${t('tests.status.paused')}`;
       case 'PAUSED':
-        return '⏸ Tạm dừng';
+        return `⏸ ${t('tests.paused')}`;
       default:
-        return '○ Chưa làm';
+        return `○ ${t('tests.status.notStarted')}`;
     }
   };
 
@@ -117,43 +119,90 @@ export function TestAttemptDetailPage() {
     );
   }
 
+  const totalQuestions = (testAttempt.section_attempts || testAttempt.sections || []).reduce((sum, section) => sum + (section.question_count || 0), 0);
+  const totalCorrect = (testAttempt.section_attempts || testAttempt.sections || []).reduce((sum, section) => sum + (section.correct_count || 0), 0);
+  const completedSections = (testAttempt.section_attempts || testAttempt.sections || []).filter(s => s.status === 'COMPLETED').length;
+
   return (
-    <div className="space-y-6">
+    <div className="max-w-6xl mx-auto space-y-8 pb-12">
       {/* Back Button */}
       <button
-        onClick={() => navigate(`/tests/${testAttempt.test_id}`)}
-        className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors group"
+        onClick={() => navigate(`/tests/${testAttempt.testId}`)}
+        className="group inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
       >
-        <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-        <span className="font-semibold">Quay lại danh sách</span>
+        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+        <span className="text-sm font-semibold">Quay lại</span>
       </button>
 
-      {/* Test Attempt Header */}
-      <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-xl p-5 border border-emerald-200/80 dark:border-emerald-800/80">
-        <HTMLRenderer
-          content={testAttempt.test_title}
-          className="text-2xl font-bold text-gray-900 dark:text-white mb-3"
-        />
-        <div className="flex flex-wrap items-center gap-3">
-          <span className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide border ${getStatusColor(testAttempt.is_completed ? 'COMPLETED' : 'IN_PROGRESS')}`}>
-            {getStatusText(testAttempt.is_completed ? 'COMPLETED' : 'IN_PROGRESS')}
-          </span>
-          <span className="text-sm text-gray-600 dark:text-gray-400">
-            {formatDate(testAttempt.started_at)}
-          </span>
-          {testAttempt.is_completed && testAttempt.total_score !== null && (
-            <div className="ml-auto">
-              <div className="text-right">
-                <div className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-600 dark:from-emerald-400 dark:via-teal-400 dark:to-cyan-400 leading-none mb-1">
+      {/* Test Attempt Header - Premium Design */}
+      <div className="relative overflow-hidden bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-gray-200 dark:border-slate-800">
+        {/* Status indicator bar */}
+        <div className={`absolute top-0 left-0 right-0 h-1 ${testAttempt.is_completed ? 'bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500' : 'bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500'}`}></div>
+        
+        {/* Background gradient */}
+        <div className={`absolute inset-0 ${testAttempt.is_completed ? 'bg-gradient-to-br from-emerald-500/5 via-teal-500/5 to-cyan-500/5' : 'bg-gradient-to-br from-blue-500/5 via-cyan-500/5 to-blue-500/5'}`}></div>
+        
+        <div className="relative p-8">
+          {/* Header with status */}
+          <div className="flex items-start justify-between mb-6">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-3">
+                <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wide ${testAttempt.is_completed ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'}`}>
+                  {testAttempt.is_completed ? '✓ Hoàn thành' : '⏱ Đang làm'}
+                </span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {formatDate(testAttempt.started_at)}
+                </span>
+              </div>
+              <HTMLRenderer
+                content={testAttempt.test_title}
+                className="text-3xl font-black text-gray-900 dark:text-white leading-tight"
+              />
+            </div>
+            
+            {/* Score badge */}
+            {testAttempt.is_completed && testAttempt.total_score !== null && (
+              <div className="flex-shrink-0 text-center bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl p-6 border-2 border-emerald-200 dark:border-emerald-800 shadow-lg">
+                <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-600 dark:from-emerald-400 dark:via-teal-400 dark:to-cyan-400 leading-none mb-2">
                   {testAttempt.total_score}%
                 </div>
-                <div className="text-[9px] text-gray-500 dark:text-gray-500 font-bold uppercase tracking-wider">
-                  Avg Score
+                <div className="text-xs text-gray-600 dark:text-gray-400 font-bold uppercase tracking-wider">
+                  Điểm trung bình
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Stats Grid */}
+          {testAttempt.is_completed && (
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100/50 dark:from-slate-800 dark:to-slate-800/50 rounded-xl p-4 border border-gray-200/50 dark:border-slate-700/50">
+                <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Hoàn thành</div>
+                <div className="text-2xl font-black text-gray-900 dark:text-white">{completedSections}/{(testAttempt.section_attempts || testAttempt.sections || []).length}</div>
+              </div>
+              <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-900/20 dark:to-emerald-900/10 rounded-xl p-4 border border-emerald-200/50 dark:border-emerald-700/50">
+                <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider mb-1">Câu đúng</div>
+                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{totalCorrect}/{totalQuestions}</div>
+              </div>
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-900/20 dark:to-blue-900/10 rounded-xl p-4 border border-blue-200/50 dark:border-blue-700/50">
+                <div className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider mb-1">Độ chính xác</div>
+                <div className="text-2xl font-black text-blue-600 dark:text-blue-400">
+                  {totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0}%
                 </div>
               </div>
             </div>
           )}
         </div>
+      </div>
+
+      {/* Section Title */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-black text-gray-900 dark:text-white">
+          Kết quả chi tiết
+        </h2>
+        <span className="text-sm text-gray-500 dark:text-gray-400 font-semibold">
+          {(testAttempt.section_attempts || testAttempt.sections || []).length} phần
+        </span>
       </div>
 
       {/* Section Attempts */}
@@ -176,6 +225,7 @@ export function TestAttemptDetailPage() {
         })}
         onSectionClick={handleSectionClick}
         mode="attempt"
+        showTitle={false}
       />
     </div>
   );

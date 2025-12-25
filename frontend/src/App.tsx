@@ -9,6 +9,7 @@ import { TestAttemptsPage } from './pages/TestAttemptsPage';
 import { TestDetailPage } from './pages/TestDetailPage';
 import { TestAttemptDetailPage } from './pages/TestAttemptDetailPage';
 import { ExamPage } from './pages/ExamPage';
+import { SkillExamPage } from './pages/SkillExamPage';
 import { AdminPage } from './pages/AdminPage';
 import { SkillsPage } from './pages/SkillsPage';
 import { SkillTestsPage } from './pages/SkillTestsPage';
@@ -84,6 +85,16 @@ function App(): React.ReactElement {
               <MainLayout>
                 <SkillTestSectionsPage />
               </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Skill Practice Exam Route - No MainLayout, uses ExamLayout internally */}
+        <Route
+          path="/skills/:testId/sectionAttempts/:sectionAttemptId"
+          element={
+            <ProtectedRoute>
+              <SkillExamPage />
             </ProtectedRoute>
           }
         />

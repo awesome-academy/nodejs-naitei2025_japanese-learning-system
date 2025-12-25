@@ -106,7 +106,7 @@ export interface IUser {
 export interface ITestAttempt {
   id: number;
   user_id: number;
-  test_id: number;
+  testId: number;
   test_title: string;
   level: JLPTLevel;
   is_completed: boolean;
@@ -283,6 +283,91 @@ export interface IActivityHeatmapDay {
   date: string; // 'YYYY-MM-DD'
   count: number; // number of activities (completed tests/sections)
   level: 0 | 1 | 2 | 3 | 4; // intensity level for color coding
+}
+
+// ============================================================================
+// Admin Analytics Types
+// ============================================================================
+
+export interface ILoginHeatmapRow {
+  weekdayId: number; // 1-7 (Monday to Sunday)
+  weekdayName: string; // "Thứ 2", "Thứ 3", etc.
+  values: number[]; // 12 values for 12 time slots
+}
+
+export interface ILoginHeatmapData {
+  columns: string[]; // ["00-02", "02-04", ..., "22-24"]
+  rows: ILoginHeatmapRow[];
+}
+
+export interface ITestFunnelItem {
+  testId: number;
+  title: string;
+  started: number; // Number of attempts started
+  completed: number; // Number of attempts completed
+  passed: number; // Number of attempts passed
+  attemptCount: number; // Total number of completed attempts
+  passRate: number; // Percentage of passed attempts
+  completionRate: number; // Percentage of completed vs started
+}
+
+export interface ITestFunnelData {
+  from: string; // Date string
+  to: string; // Date string
+  items: ITestFunnelItem[];
+}
+
+// Test Question Statistics for difficulty analysis
+export interface IQuestionStatistic {
+  questionNumber: number;
+  correctCount: number;
+  totalCount: number;
+  correctRate: number; // 0-1 (percentage as decimal)
+}
+
+export interface ISectionStatistic {
+  sectionName: string;
+  sectionTotalQuestion: number; // Total questions in this section from backend
+  questions: IQuestionStatistic[];
+}
+
+export interface ITestStatistics {
+  testId: number;
+  sections: ISectionStatistic[];
+}
+
+// Admin Overview Statistics
+export interface IAdminOverview {
+  totalUsers: number;
+  activeUsers: number;
+  totalTests: number;
+  activeTests: number;
+  totalAttempts: number;
+  completedAttempts: number;
+  averageScore: number;
+  passRate: number;
+}
+
+// Skill Analysis Types
+export interface ISkillSlice {
+  skill: string; // "LISTENING", "READING", "VOCAB_GRAMMAR"
+  label: string; // Vietnamese label
+  value: number; // Percentage
+  wrongRate: number; // Wrong answer rate
+  total: number; // Total answers
+  wrong: number; // Number of wrong answers
+}
+
+export interface ISkillLevel {
+  level: string; // "N1", "N2", "N3", "N4", "N5"
+  totalAnswers: number;
+  slices: ISkillSlice[];
+}
+
+export interface ISkillAnalysisData {
+  from: string;
+  to: string;
+  levels: ISkillLevel[];
 }
 
 // Type alias for backward compatibility
