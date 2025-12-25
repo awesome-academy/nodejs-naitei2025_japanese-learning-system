@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, Target, Zap, BookOpen, TrendingUp, Sparkles } from 'lucide-react';
+import { ArrowLeft, Zap, BookOpen, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { dataService } from '../services';
 import type { ITestDetail, ISectionWithParts } from '../types';
@@ -22,7 +22,9 @@ export function SkillTestSectionsPage() {
 
   const [test, setTest] = useState<ITestDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sectionAttempts, setSectionAttempts] = useState<Map<number, any>>(new Map());
   const hasFetchedRef = useRef(false);
+  const user = useAuthStore(state => state.user);
 
   useEffect(() => {
     if (testId && !hasFetchedRef.current) {
@@ -37,6 +39,9 @@ export function SkillTestSectionsPage() {
     try {
       const testData = await dataService.getTestDetail(parseInt(testId!));
       setTest(testData);
+      
+      // Fetch test attempts to check which sections have been attempted
+      await fetchSectionAttempts();
     } catch (error) {
       console.error('Failed to fetch test detail:', error);
     } finally {
@@ -44,52 +49,58 @@ export function SkillTestSectionsPage() {
     }
   };
 
-  const handleSectionClick = async (section: ISectionWithParts) => {
+  const fetchSectionAttempts = async () => {
     try {
-      const { user } = useAuthStore.getState();
       if (!user) return;
-
-      // Check if user has existing test attempts for this test
-      const existingTestAttempts = await dataService.getUserTestAttempts(test!.id);
-      
-      if (existingTestAttempts.length > 0) {
-        // Find the most recent test attempt
-        const latestTestAttempt = existingTestAttempts[existingTestAttempts.length - 1];
-        const sectionAttempts = latestTestAttempt.section_attempts || [];
-        
-        // Find section attempt for this specific section
-        const sectionAttempt = sectionAttempts.find(sa => 
-          (sa.section_id || (sa as any).sectionId) === section.id
-        );
-        
-        if (sectionAttempt) {
-          // If section attempt exists and is not completed, resume it
-          if (sectionAttempt.status !== 'COMPLETED') {
-            navigate(`/sectionAttempts/${sectionAttempt.id}?mode=exam`);
-            return;
+      // Get all test attempts for this user and test
+      const attempts = await dataService.getTestAttempts(user.id, parseInt(testId!));
+      console.log('[SkillTestSectionsPage] All test attempts:', attempts);
+      // Build a map of section_id -> best section attempt (highest score)
+      const sectionAttemptsMap = new Map<number, any>();
+      attempts.forEach(testAttempt => {
+        const sectionAttempts = testAttempt.section_attempts || (testAttempt as any).sectionAttempts || [];
+        console.log('[SkillTestSectionsPage] Section attempts in test attempt:', sectionAttempts);
+        sectionAttempts.forEach((sectionAttempt: any) => {
+          const sectionId = sectionAttempt.section_id || sectionAttempt.sectionId;
+          const score = sectionAttempt.score || 0;
+          console.log('[SkillTestSectionsPage] Processing section attempt:', { 
+            sectionId, 
+            status: sectionAttempt.status, 
+            score,
+            attemptId: sectionAttempt.id,
+          });
+          // Only keep the best (highest score) attempt for each section
+          if (!sectionAttemptsMap.has(sectionId) || sectionAttemptsMap.get(sectionId).score < score) {
+            sectionAttemptsMap.set(sectionId, sectionAttempt);
           }
-        }
-      }
-      
-      // If no existing test attempt or section is completed, start new attempt
-      console.log('[SkillTestSectionsPage] Starting new test attempt...');
-      const testAttempt = await dataService.startTestAttempt(test!.id);
-      
-      // Find the section attempt from the created test attempt
-      const sectionAttempts = testAttempt.section_attempts || [];
-      const sectionAttempt = sectionAttempts.find(sa => 
-        (sa.section_id || (sa as any).sectionId) === section.id
-      );
-      
-      if (!sectionAttempt) {
-        throw new Error('Section attempt not found in test attempt');
-      }
-      
-      // Navigate to exam page with the new section attempt ID
-      navigate(`/sectionAttempts/${sectionAttempt.id}?mode=exam`);
+        });
+      });
+      console.log('[SkillTestSectionsPage] Final section attempts map (best scores):', Array.from(sectionAttemptsMap.entries()));
+      setSectionAttempts(sectionAttemptsMap);
+    } catch (error) {
+      console.error('Failed to fetch section attempts:', error);
+    }
+  };
+
+  const handleSectionStart = async (section: ISectionWithParts, isRetry: boolean = false) => {
+    try {
+      if (!user) return;
+      // For skill practice, start section attempt directly
+      console.log('[SkillTestSectionsPage] Starting section attempt...', { isRetry });
+      const sectionAttempt = await dataService.startSectionAttempt(section.id, isRetry);
+      // Navigate to skill exam page with the new section attempt ID
+      navigate(`/skills/${testId}/sectionAttempts/${sectionAttempt.id}?mode=exam`);
     } catch (error) {
       console.error('Failed to start section:', error);
     }
+  };
+
+  const handleViewResult = (sectionAttemptId: number) => {
+    navigate(`/skills/${testId}/sectionAttempts/${sectionAttemptId}?mode=review`);
+  };
+
+  const getSectionStatus = (sectionId: number) => {
+    return sectionAttempts.get(sectionId);
   };
 
   if (loading) {
@@ -104,16 +115,17 @@ export function SkillTestSectionsPage() {
     );
   }
 
+  // Calculate total questions and time from sections
   const totalQuestions = test.sections?.reduce((sum, section) => {
-    const sectionQuestions = section.parts?.reduce((partSum, part) => {
-      return partSum + (part.questions?.length || 0);
-    }, 0) || 0;
+    // Ưu tiên lấy section.question_count nếu có, nếu không thì cộng tổng số câu từ các part
+    if (typeof section.question_count === 'number') {
+      return sum + section.question_count;
+    }
+    const sectionQuestions = section.parts?.reduce((partSum, part) => partSum + (part.questions?.length || 0), 0) || 0;
     return sum + sectionQuestions;
   }, 0) || 0;
-
-  const totalTime = test.sections?.reduce((sum, section) => {
-    return sum + (section.time_limit || 0);
-  }, 0) || 0;
+  const totalTime = test.sections?.reduce((sum, section) => sum + (section.time || 0), 0) || 0;
+  const totalSections = test.sections?.length || 0;
 
   return (
     <div className="min-h-screen pb-12">
@@ -132,7 +144,7 @@ export function SkillTestSectionsPage() {
           <div className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 group-hover:border-emerald-400 dark:group-hover:border-emerald-500 group-hover:shadow-lg group-hover:shadow-emerald-500/10 transition-all group-hover:-translate-x-1">
             <ArrowLeft className="w-5 h-5" />
           </div>
-          <span className="font-semibold">Quay lại</span>
+          <span className="font-semibold">{t('common.back')}</span>
         </button>
 
         {/* Hero Section - Skill Practice Theme */}
@@ -151,27 +163,7 @@ export function SkillTestSectionsPage() {
           </div>
           
           <div className="relative">
-            {/* Skill Practice Badge */}
-            <div className="inline-flex items-center gap-2 mb-4">
-              <div className="px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm border border-white/30">
-                <div className="flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-white" />
-                  <span className="text-sm font-black text-white uppercase tracking-wider">
-                    Luyện kỹ năng
-                  </span>
-                </div>
-              </div>
-              <div className="px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm border border-white/30">
-                <span className="text-sm font-black text-white uppercase tracking-wider">
-                  {test.level}
-                </span>
-              </div>
-              <div className="px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/20">
-                <span className="text-xs font-bold text-white/90">
-                  {test.year}/{test.month}
-                </span>
-              </div>
-            </div>
+           
 
             {/* Test Title */}
             <HTMLRenderer
@@ -179,38 +171,7 @@ export function SkillTestSectionsPage() {
               className="text-3xl md:text-4xl font-black text-white mb-6 leading-tight drop-shadow-lg"
             />
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="bg-white/15 backdrop-blur-md rounded-2xl p-4 border border-white/20 hover:bg-white/20 transition-colors">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 rounded-lg bg-white/20">
-                    <TrendingUp className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="text-xs font-bold text-white/80 uppercase tracking-wide">Phần thi</span>
-                </div>
-                <p className="text-2xl font-black text-white">{test.sections?.length || 0}</p>
-              </div>
-
-              <div className="bg-white/15 backdrop-blur-md rounded-2xl p-4 border border-white/20 hover:bg-white/20 transition-colors">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 rounded-lg bg-white/20">
-                    <Target className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="text-xs font-bold text-white/80 uppercase tracking-wide">Câu hỏi</span>
-                </div>
-                <p className="text-2xl font-black text-white">{totalQuestions}</p>
-              </div>
-
-              <div className="bg-white/15 backdrop-blur-md rounded-2xl p-4 border border-white/20 hover:bg-white/20 transition-colors">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 rounded-lg bg-white/20">
-                    <Clock className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="text-xs font-bold text-white/80 uppercase tracking-wide">Thời gian</span>
-                </div>
-                <p className="text-2xl font-black text-white">{totalTime} phút</p>
-              </div>
-            </div>
+            
           </div>
         </div>
 
@@ -221,20 +182,20 @@ export function SkillTestSectionsPage() {
               <BookOpen className="w-6 h-6" />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Hướng dẫn luyện tập</h3>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{t('skills.practiceGuide')}</h3>
               <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
                 <li className="flex items-start gap-2">
                   <span className="flex-none w-5 h-5 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center mt-0.5">1</span>
-                  <span>Chọn phần thi bạn muốn luyện tập từ danh sách bên dưới</span>
+                  <span>{t('skills.selectSectionToPractice')}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="flex-none w-5 h-5 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center mt-0.5">2</span>
-                  <span>Hoàn thành tất cả câu hỏi trong thời gian quy định</span>
+                  <span>{t('skills.completeSectionGuide')}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="flex-none w-5 h-5 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center mt-0.5">3</span>
-                  <span>Xem kết quả và đáp án chi tiết sau khi hoàn thành</span>
-                </li>
+                  <span>{t('skills.viewResultsGuide')}</span>
+                </li>                
               </ul>
             </div>
           </div>
@@ -243,37 +204,47 @@ export function SkillTestSectionsPage() {
         {/* Section Cards */}
         <div>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white">
-                <Zap className="w-6 h-6" />
+              <h2 className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white">
+                  <Zap className="w-6 h-6" />
+                </div>
+                {t('skills.selectSectionToPractice')}
+              </h2>
+              <div className="px-4 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
+                <span className="text-sm font-bold text-emerald-700 dark:text-emerald-300">
+                  {t('skills.sectionCount', { count: test.sections?.length || 0 })}
+                </span>
               </div>
-              Chọn phần thi để bắt đầu
-            </h2>
-            <div className="px-4 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
-              <span className="text-sm font-bold text-emerald-700 dark:text-emerald-300">
-                {test.sections?.length || 0} phần
-              </span>
-            </div>
           </div>
           
           {test.sections && test.sections.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {test.sections.map((section, index) => (
-                <SkillSectionCard
-                  key={section.id}
-                  section={section}
-                  index={index}
-                  onClick={() => handleSectionClick(section)}
-                  mode="detail"
-                />
-              ))}
+              {test.sections.map((section, index) => {
+                const sectionAttempt = getSectionStatus(section.id);
+                const hasAttempt = sectionAttempt && sectionAttempt.status === 'COMPLETED';
+                
+                console.log('[SkillTestSectionsPage] Rendering section', section.id, ':', { sectionAttempt, hasAttempt });
+                
+                return (
+                  <SkillSectionCard
+                    key={section.id}
+                    section={section}
+                    index={index}
+                    onClick={() => !hasAttempt && handleSectionStart(section, false)}
+                    mode="detail"
+                    hasAttempt={hasAttempt}
+                    onRetry={hasAttempt ? () => handleSectionStart(section, true) : undefined}
+                    onViewResult={hasAttempt ? () => handleViewResult(sectionAttempt.id) : undefined}
+                  />
+                );
+              })}
             </div>
           ) : (
-            <div className="text-center py-20 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900/50 dark:to-slate-800/50 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700">
-              <Sparkles className="w-16 h-16 mx-auto mb-4 text-gray-400 dark:text-gray-600" />
-              <p className="text-lg font-bold text-gray-600 dark:text-gray-400">
-                Không có phần thi nào
-              </p>
+              <div className="text-center py-20 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900/50 dark:to-slate-800/50 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700">
+                <Sparkles className="w-16 h-16 mx-auto mb-4 text-gray-400 dark:text-gray-600" />
+                <p className="text-lg font-bold text-gray-600 dark:text-gray-400">
+                  {t('skills.noSections')}
+                </p>
             </div>
           )}
         </div>

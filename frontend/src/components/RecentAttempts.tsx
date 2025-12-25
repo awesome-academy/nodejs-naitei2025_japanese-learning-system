@@ -24,12 +24,13 @@ export function RecentAttempts() {
 
       try {
         const data = await dataService.getTestAttempts(user!.id);
-        // Filter only practice test attempts (skill='all'), not skill practice
-        // TODO: Backend needs to return 'skill' field in test attempts
-        // For now, show all attempts
+        // Filter only JLPT test attempts (not skill practice)
+        const jlptAttempts = data.filter(attempt => 
+          attempt.test_title?.toLowerCase().includes('jlpt')
+        );
         
-        // Sort by started_at descending and take latest 5
-        const sortedData = data.sort((a, b) => 
+        // Sort by started_at descending and take latest 3
+        const sortedData = jlptAttempts.sort((a, b) => 
           new Date(b.started_at).getTime() - new Date(a.started_at).getTime()
         );
         setAttempts(sortedData.slice(0, 3));

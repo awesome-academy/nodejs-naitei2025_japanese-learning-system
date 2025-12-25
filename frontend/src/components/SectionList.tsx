@@ -27,12 +27,12 @@ export function SectionList({
   return (
     <div>
       {showTitle && (
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+        <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-6">
           {title || defaultTitle}
         </h2>
       )}
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {sections.map((section, index) => (
           <SectionCard
             key={section.id}

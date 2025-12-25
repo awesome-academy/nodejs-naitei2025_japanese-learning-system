@@ -31,7 +31,11 @@ export function HistoryPage() {
     setLoading(true);
     try {
       const data = await dataService.getTestAttempts(user!.id);
-      setTestAttempts(data);
+      // Filter only JLPT test attempts (not skill practice)
+      const jlptAttempts = data.filter(attempt => 
+        attempt.test_title?.toLowerCase().includes('jlpt')
+      );
+      setTestAttempts(jlptAttempts);
     } catch (error) {
       console.error('Failed to load history:', error);
     } finally {

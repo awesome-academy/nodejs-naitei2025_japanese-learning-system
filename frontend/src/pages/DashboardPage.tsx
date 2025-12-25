@@ -3,10 +3,11 @@
  * Same as TestsPage functionality
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Sparkles } from 'lucide-react';
 import { dataService } from '../services';
+import { dataCache } from '../services/DataCache';
 import type { ITest, JLPTLevel } from '../types';
 import { TestCardList } from '../components/TestCardList';
 import { FilterBar, FilterPill, FilterSelect, FilterDivider } from '../components/filters';
@@ -14,7 +15,7 @@ import { FilterBar, FilterPill, FilterSelect, FilterDivider } from '../component
 export function DashboardPage() {
   const { t } = useTranslation();
 
-  const [tests, setTests] = useState<ITest[]>([]);
+  const [allTests, setAllTests] = useState<ITest[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedLevel, setSelectedLevel] = useState<JLPTLevel | 'ALL'>('ALL');
   const [selectedYear, setSelectedYear] = useState<number | 'ALL'>('ALL');
@@ -40,65 +41,121 @@ export function DashboardPage() {
     })),
   ];
 
+  // Chỉ fetch data 1 lần khi component mount - sử dụng global cache
   useEffect(() => {
-    fetchTests();
-  }, [selectedLevel, selectedYear, selectedStatus]);
-
-  const fetchTests = async () => {
-    setLoading(true);
-    try {
-      const filter = {
-        level: selectedLevel !== 'ALL' ? selectedLevel : undefined,
-        year: selectedYear !== 'ALL' ? selectedYear : undefined,
-        skill: 'all' as const, // Only show full tests in Dashboard
-      };
-      let data = await dataService.getTests(filter);
+    const fetchInitialData = async () => {
+      setLoading(true);
       
-      // Fetch all test attempts to check which tests have been attempted/completed
       try {
-        const allAttempts = await dataService.getTestAttempts(1, 1000);
-        const attemptedTestIds = new Set(allAttempts.map(attempt => attempt.test_id));
+        // Check cache trước - nếu có rồi thì dùng luôn
+        const cachedTests = dataCache.getTests();
+        const cachedAttempts = dataCache.getTestAttempts();
+        
+        if (cachedTests && cachedAttempts) {
+          console.log('[DashboardPage] Using cached data');
+          
+          const attemptedTestIds = new Set(cachedAttempts.map(a => a.testId));
+          const completedTestIds = new Set(
+            cachedAttempts.filter(a => a.is_completed).map(a => a.testId)
+          );
+          
+          const updatedTests = cachedTests.map((test: ITest) => ({
+            ...test,
+            is_attempted: attemptedTestIds.has(test.id),
+            is_completed: completedTestIds.has(test.id)
+          }));
+          
+          setAllTests(updatedTests);
+          setLoading(false);
+          return;
+        }
+        
+        // Nếu đang có request pending, chờ nó xong thay vì tạo request mới
+        const pendingTests = dataCache.getPendingTests();
+        const pendingAttempts = dataCache.getPendingAttempts();
+        
+        let testsPromise: Promise<any>;
+        let attemptsPromise: Promise<any>;
+        
+        if (pendingTests) {
+          console.log('[DashboardPage] Waiting for pending tests request');
+          testsPromise = pendingTests;
+        } else {
+          console.log('[DashboardPage] Fetching tests - FIRST REQUEST');
+          const promise = dataService.getTests({ skill: 'all' });
+          dataCache.setPendingTests(promise);
+          testsPromise = promise.finally(() => dataCache.setPendingTests(null));
+        }
+        
+        if (pendingAttempts) {
+          console.log('[DashboardPage] Waiting for pending attempts request');
+          attemptsPromise = pendingAttempts;
+        } else {
+          console.log('[DashboardPage] Fetching attempts - FIRST REQUEST');
+          const promise = dataService.getTestAttempts(1); // Don't pass testId - we want ALL attempts
+          dataCache.setPendingAttempts(promise);
+          attemptsPromise = promise.finally(() => dataCache.setPendingAttempts(null));
+        }
+        
+        const [testsData, attemptsData] = await Promise.all([testsPromise, attemptsPromise]);
+        
+        // Save to cache
+        dataCache.setTests(testsData);
+        dataCache.setTestAttempts(attemptsData);
+        
+        console.log('[DEBUG] attemptsData:', attemptsData);
+        console.log('[DEBUG] Sample attempt:', attemptsData[0]);
+        
+        const attemptedTestIds = new Set(attemptsData.map((a: any) => a.testId));
         const completedTestIds = new Set(
-          allAttempts
-            .filter(attempt => attempt.is_completed)
-            .map(attempt => attempt.test_id)
+          attemptsData.filter((a: any) => a.is_completed).map((a: any) => a.testId)
         );
         
-        // Store original values from backend for comparison
-        const originalIsAttempted = new Map(data.map(test => [test.id, test.is_attempted]));
+        console.log('[DEBUG] Attempted test IDs:', Array.from(attemptedTestIds));
+        console.log('[DEBUG] Completed test IDs:', Array.from(completedTestIds));
         
-        // Update is_attempted and is_completed based on actual test attempts
-        data = data.map(test => ({
+        const updatedTests = testsData.map((test: ITest) => ({
           ...test,
           is_attempted: attemptedTestIds.has(test.id),
           is_completed: completedTestIds.has(test.id)
         }));
         
-        console.log('[DashboardPage] Tests with updated status:', data.map(t => ({ 
-          id: t.id, 
-          title: t.title, 
-          backend_is_attempted: originalIsAttempted.get(t.id),
-          calculated_is_attempted: attemptedTestIds.has(t.id),
-          calculated_is_completed: completedTestIds.has(t.id)
-        })));
-      } catch (attemptError) {
-        console.error('Failed to fetch test attempts for status check:', attemptError);
+        console.log('[DEBUG] Sample updated test:', updatedTests[0]);
+        
+        setAllTests(updatedTests);
+      } catch (error) {
+        console.error('Failed to fetch data:', error);
+      } finally {
+        setLoading(false);
       }
-      
-      // Filter by status
-      if (selectedStatus === 'ATTEMPTED') {
-        data = data.filter(test => test.is_attempted);
-      } else if (selectedStatus === 'NOT_ATTEMPTED') {
-        data = data.filter(test => !test.is_attempted);
-      }
-      
-      setTests(data);
-    } catch (error) {
-      console.error('Failed to fetch tests:', error);
-    } finally {
-      setLoading(false);
+    };
+
+    fetchInitialData();
+  }, []); // Empty deps - chỉ chạy khi mount
+
+  // Filter tests dựa trên state - KHÔNG GỌI API
+  const filteredTests = useMemo(() => {
+    let filtered = [...allTests];
+    
+    // Filter by level
+    if (selectedLevel !== 'ALL') {
+      filtered = filtered.filter(test => test.level === selectedLevel);
     }
-  };
+    
+    // Filter by year
+    if (selectedYear !== 'ALL') {
+      filtered = filtered.filter(test => test.year === selectedYear);
+    }
+    
+    // Filter by status
+    if (selectedStatus === 'ATTEMPTED') {
+      filtered = filtered.filter(test => test.is_attempted);
+    } else if (selectedStatus === 'NOT_ATTEMPTED') {
+      filtered = filtered.filter(test => !test.is_attempted);
+    }
+    
+    return filtered;
+  }, [allTests, selectedLevel, selectedYear, selectedStatus]);
 
   return (
     <div className="space-y-8">
@@ -113,11 +170,11 @@ export function DashboardPage() {
               {t('dashboard.subtitle', 'Choose a test to start practicing')}
             </p>
           </div>
-          {!loading && tests.length > 0 && (
+          {!loading && filteredTests.length > 0 && (
             <div className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 px-4 py-3 rounded-full border border-emerald-200 dark:border-emerald-800">
               <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <span className="text-sm font-bold text-emerald-700 dark:text-emerald-300">
-                {t('dashboard.availablePlural', '{{count}} tests available', { count: tests.length })}
+                {t('dashboard.availablePlural', '{{count}} tests available', { count: filteredTests.length })}
               </span>
             </div>
           )}
@@ -157,7 +214,7 @@ export function DashboardPage() {
 
       {/* Test Grid */}
       <TestCardList 
-        tests={tests}
+        tests={filteredTests}
         loading={loading}
         emptyMessage={t('tests.noTests', 'No tests found')}
         emptyDescription={t('dashboard.emptyDescription', 'Try adjusting your filters')}

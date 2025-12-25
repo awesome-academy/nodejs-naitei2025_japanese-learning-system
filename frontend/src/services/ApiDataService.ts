@@ -18,6 +18,10 @@ import type {
   SkillType,
   IAnswer,
   ISectionWithParts,
+  ILoginHeatmapData,
+  ITestFunnelData,
+  ITestStatistics,
+  IAdminOverview,
 } from '../types';
 import type { IDataService } from './IDataService';
 
@@ -230,7 +234,7 @@ export class ApiDataService implements IDataService {
     // Filter by testId on frontend if provided
     if (testId) {
       // Backend returns test_id (snake_case)
-      const filtered = attempts.filter(a => a.test_id === testId);
+      const filtered = attempts.filter(a => a.testId === testId);
       return filtered;
     }
     return attempts;
@@ -257,6 +261,15 @@ export class ApiDataService implements IDataService {
   // ============================================================================
   // Section Attempt Management
   // ============================================================================
+
+  async startSectionAttempt(sectionId: number, retry: boolean = false): Promise<ISectionAttempt> {
+    // Start a section attempt directly (for skill practice)
+    const url = retry 
+      ? `/progress/section-attempt/start/${sectionId}?retry=true`
+      : `/progress/section-attempt/start/${sectionId}`;
+    const response = await this.api.post<{ sectionAttempt: ISectionAttempt }>(url);
+    return response.data.sectionAttempt;
+  }
 
   async getSectionAttempt(attemptId: number): Promise<ISectionAttempt> {
     const response = await this.api.get<{ sectionAttempt: ISectionAttempt }>(
@@ -313,20 +326,42 @@ export class ApiDataService implements IDataService {
     return response.data.users;
   }
 
-  async getTestStatistics(testId?: number): Promise<Array<{
-    testId: number;
-    testTitle: string;
-    completedAttempts: number;
-    totalAttempts: number;
-  }>> {
-    const url = testId ? `/admin/statistics/test/${testId}` : '/admin/statistics/tests';
-    const response = await this.api.get<{ statistics: Array<{
-      testId: number;
-      testTitle: string;
-      completedAttempts: number;
-      totalAttempts: number;
-    }> }>(url);
-    return response.data.statistics;
+  async getCompletedAttemptsByTest(testId: number): Promise<ITestAttempt[]> {
+    const response = await this.api.get<{ testAttempts: ITestAttempt[] }>(`/user/admin/${testId}/completed-attempts`);
+    return response.data.testAttempts;
+  }
+
+  // ============================================================================
+  // Admin Analytics
+  // ============================================================================
+
+  async getLoginHeatmap(): Promise<ILoginHeatmapData> {
+    const response = await this.api.get<ILoginHeatmapData>('/admin/analytics/heatmap/login');
+    return response.data;
+  }
+
+  async resetLoginHeatmap(): Promise<{ success: boolean; message: string }> {
+    const response = await this.api.post<{ success: boolean; message: string }>('/admin/analytics/heatmap/login/reset');
+    return response.data;
+  }
+
+  async getTestFunnel(from: string, to: string): Promise<ITestFunnelData> {
+    const params = new URLSearchParams();
+    params.append('from', from);
+    params.append('to', to);
+    
+    const response = await this.api.get<ITestFunnelData>('/admin/analytics/funnel/tests', { params });
+    return response.data;
+  }
+
+  async getTestStatistics(testId: number): Promise<ITestStatistics> {
+    const response = await this.api.get<ITestStatistics>(`/admin/analytics/test/${testId}/statistics`);
+    return response.data;
+  }
+
+  async getAdminOverview(): Promise<IAdminOverview> {
+    const response = await this.api.get<IAdminOverview>('/admin/analytics/overview');
+    return response.data;
   }
 
   // ============================================================================

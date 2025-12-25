@@ -21,9 +21,12 @@ interface SkillSectionCardProps {
   index: number;
   onClick: () => void;
   mode?: 'detail' | 'attempt';
+  hasAttempt?: boolean;
+  onRetry?: () => void;
+  onViewResult?: () => void;
 }
 
-export function SkillSectionCard({ section, index, onClick, mode = 'detail' }: SkillSectionCardProps) {
+export function SkillSectionCard({ section, index, onClick, mode = 'detail', hasAttempt = false, onRetry, onViewResult }: SkillSectionCardProps) {
   const { t } = useTranslation();
   
   const getSectionIcon = (sectionName: string | undefined, index: number) => {
@@ -107,7 +110,7 @@ export function SkillSectionCard({ section, index, onClick, mode = 'detail' }: S
   return (
     <div
       onClick={onClick}
-      className="group relative bg-white dark:bg-slate-900 rounded-xl overflow-hidden border-2 border-emerald-200 dark:border-emerald-800 hover:border-emerald-400 dark:hover:border-emerald-500 shadow-md hover:shadow-xl hover:shadow-emerald-500/15 dark:hover:shadow-emerald-500/25 hover:-translate-y-1.5 transition-all duration-300 cursor-pointer"
+      className="group relative bg-white dark:bg-slate-900 rounded-xl overflow-hidden border-2 border-emerald-200 dark:border-emerald-800 hover:border-emerald-400 dark:hover:border-emerald-500 shadow-md hover:shadow-xl hover:shadow-emerald-500/15 dark:hover:shadow-emerald-500/25 hover:-translate-y-1.5 transition-all duration-300 cursor-pointer h-full flex flex-col"
     >
       {/* Top gradient bar - emerald theme */}
       <div className={`h-1 bg-gradient-to-r ${getSectionGradient(index)}`} />
@@ -120,7 +123,7 @@ export function SkillSectionCard({ section, index, onClick, mode = 'detail' }: S
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/8 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
       </div>
 
-      <div className="p-4 relative">
+      <div className="p-4 relative flex flex-col flex-1">
         {/* Header: Icon + Title + Skill Badge */}
         <div className="flex items-start gap-3 mb-3">
           <div className={`flex-none w-11 h-11 rounded-lg bg-gradient-to-br ${getSectionGradient(index)} flex items-center justify-center text-white shadow-md group-hover:shadow-lg group-hover:scale-105 group-hover:rotate-2 transition-all duration-300`}>
@@ -149,7 +152,7 @@ export function SkillSectionCard({ section, index, onClick, mode = 'detail' }: S
         </div>
 
         {/* Stats - compact and elegant */}
-        <div className="bg-emerald-50/80 dark:bg-emerald-900/20 rounded-lg p-2.5 mb-3 space-y-1.5 border border-emerald-100 dark:border-emerald-800/50">
+        <div className="bg-emerald-50/80 dark:bg-emerald-900/20 rounded-lg p-2.5 mb-3 space-y-1.5 border border-emerald-100 dark:border-emerald-800/50 flex-1">
           {mode === 'attempt' && section.status === 'COMPLETED' ? (
             <>
               <div className="flex items-center justify-between">
@@ -194,16 +197,35 @@ export function SkillSectionCard({ section, index, onClick, mode = 'detail' }: S
         </div>
 
         {/* CTA Footer - emerald theme */}
-        <div className="flex items-center justify-between pt-3 border-t border-emerald-200 dark:border-emerald-700">
-          <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 group-hover:text-emerald-500 dark:group-hover:text-emerald-300 transition-colors uppercase tracking-wide">
-            {getCTAText()}
-          </span>
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-            <span className="text-white font-bold text-sm group-hover:translate-x-0.5 transition-transform">
-              →
-            </span>
+        {hasAttempt && onRetry && onViewResult ? (
+          <div className="grid grid-cols-2 gap-2 pt-3 border-t border-emerald-200 dark:border-emerald-700">
+            <button
+              onClick={(e) => { e.stopPropagation(); onRetry(); }}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold text-xs rounded-lg transition-all hover:scale-105 shadow-md hover:shadow-lg"
+            >
+              <PlayCircle className="w-3.5 h-3.5" />
+              <span>{t('tests.retrySection')}</span>
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onViewResult(); }}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-bold text-xs rounded-lg transition-all hover:scale-105 shadow-md hover:shadow-lg"
+            >
+              <CheckCircle className="w-3.5 h-3.5" />
+              <span>{t('tests.viewResults')}</span>
+            </button>
           </div>
-        </div>
+        ) : (
+          <div className="flex items-center justify-between pt-3 border-t border-emerald-200 dark:border-emerald-700">
+            <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 group-hover:text-emerald-500 dark:group-hover:text-emerald-300 transition-colors uppercase tracking-wide">
+              {getCTAText()}
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
+              <span className="text-white font-bold text-sm group-hover:translate-x-0.5 transition-transform">
+                →
+              </span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
